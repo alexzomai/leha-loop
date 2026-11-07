@@ -9,6 +9,7 @@ A Claude Code skill that makes the agent a "feature boss" for any git project. I
 - a merger that merges approved work, and archives or pushes only on command;
 - watching the agents, cleaning up worktrees, restarting the dev server.
 
+![The leha-loop cycle](assets/loop.svg)
 It fits projects that use [OpenSpec](https://github.com/Fission-AI/OpenSpec): branch = worktree = change id, workers propose and then apply the change, reviewers run `openspec validate --strict`. Merged but unarchived changes become the user's "to check" list, and a change is archived only after the user confirms it. Projects without OpenSpec work too, with plain branches.
 
 ## Install
