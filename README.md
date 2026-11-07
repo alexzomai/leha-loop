@@ -1,3 +1,5 @@
+<p align="center"><img src="assets/banner.svg" alt="leha-loop" width="720"></p>
+
 # leha-loop
 
 A Claude Code skill that makes the agent a "feature boss" for any git project. It runs a team of agents in [Herdr](https://herdr.app) (`hc`, herdr-core):
