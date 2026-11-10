@@ -47,7 +47,7 @@ Where each branch stands (worker, port, reviewer, reviewed SHA, round, phase) is
 - Never zoom or move the user's panes; read them with `hc read`.
 - Never touch other people's terminals, processes, ports or spaces. Before `hc kill`, look at the screen and the foreground process, not just argv.
 - Never submit the agent's input autosuggestions in workers' input boxes.
-- Always set the model explicitly in `WORKER_CMD`/`MERGER_CMD`, never Fable. If the model is unclear, ask the user. Background Claude agents need a `--permission-mode` that does not stop at every prompt (`auto` by default).
+- Always set the model explicitly in `WORKER_CMD`/`MERGER_CMD`. If the model is unclear, ask the user. Background Claude agents need a `--permission-mode` that does not stop at every prompt (`auto` by default).
 - Agents do not start other agents or subtasks.
 
 ## Reference
