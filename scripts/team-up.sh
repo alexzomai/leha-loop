@@ -10,7 +10,7 @@ start() { # name cmd... (for agents the last argument is the first message)
   hc rm "$n" >/dev/null 2>&1 || true
   new=$(hc run --bg --no-parent --outlive-parent --keep --name "$n" --cwd "$REPO" "$@" | jq -r '.address // empty')
   [ -n "$new" ] || fb_die "hc run did not start $n"
-  [ -n "$old" ] && [ -n "$SPACE" ] && "$PY" "$FB/scripts/layout.py" swap "$old" "$new" >/dev/null 2>&1 || true
+  [ -n "$old" ] && [ -n "$SPACE" ] && python3 "$FB/scripts/layout.py" swap "$old" "$new" >/dev/null 2>&1 || true
   echo "$new"
 }
 revs=(); for i in $(seq 1 "$REVIEWERS"); do
@@ -23,14 +23,14 @@ merger=$(start "${PREFIX}merger" "${MERGER_CMD[@]}" "$rules")
 dev=""; [ ${#DEV_CMD[@]} -gt 0 ] && dev=$(start "$DEV_NAME" "${DEV_CMD[@]}")
 if [ -n "$SPACE" ]; then
   spec="$(IFS=,; echo "${revs[*]}")/$merger"
-  tab=$("$PY" "$FB/scripts/layout.py" add-tab "$SPACE" "$TEAM_TAB" "$spec")
+  tab=$(python3 "$FB/scripts/layout.py" add-tab "$SPACE" "$TEAM_TAB" "$spec")
   for t in "${revs[@]}" "$merger"; do fb_label "$t" "$SPACE" "$tab" "$PROJ / $TEAM_TAB"; done
   if [ -n "$dev" ]; then
-    dtab=$("$PY" "$FB/scripts/layout.py" add-tab "$SPACE" "$DEV_TAB" "$dev")
+    dtab=$(python3 "$FB/scripts/layout.py" add-tab "$SPACE" "$DEV_TAB" "$dev")
     fb_label "$dev" "$SPACE" "$dtab" "$PROJ / $DEV_TAB"
   fi
   # A terminal that was alive the whole time but is missing from an existing tab: report it
-  shown=" $("$PY" "$FB/scripts/layout.py" show | tr -s ' \n' '  ') "
+  shown=" $(python3 "$FB/scripts/layout.py" show | tr -s ' \n' '  ') "
   for t in "${revs[@]}" "$merger" $dev; do case $shown in *" $t "*) ;; *) echo "note: $t is not in the layout" >&2;; esac; done
 fi
 echo "reviewers: ${revs[*]}  merger: $merger  dev: ${dev:--}"

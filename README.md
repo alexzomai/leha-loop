@@ -21,7 +21,7 @@ git clone https://github.com/alexzomai/leha-loop ~/.claude/skills/leha-loop
 
 Requires `hc` (herdr-core), `claude`, `codex`, `git`, `jq` and Python 3.
 
-Works on macOS (the system bash 3.2 is enough), Linux and Windows. On Windows the scripts run in Git Bash (it comes with Git for Windows); install `jq` and Python there too (`winget install jqlang.jq Python.Python.3.12`). Without `lsof` (Git Bash) cleanup only warns about a worker's dev server still holding its port instead of stopping it.
+Works on macOS (the system bash 3.2 is enough) and Linux. Without `lsof` (some Linux systems) cleanup only warns about a worker's dev server still holding its port instead of stopping it.
 
 ## Getting started in a project
 

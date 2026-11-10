@@ -1,5 +1,5 @@
 # Shared leha-loop settings. Source it with: . "$(dirname "$0")/common.sh"
-# Runs on macOS (system bash 3.2: no associative arrays, no mapfile), Linux and Windows (Git Bash).
+# Runs on macOS (system bash 3.2: no associative arrays, no mapfile) and Linux.
 FB=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 fb_die() { echo "leha-loop: $*" >&2; exit 1; }
 REPO=${FB_REPO:-$(git worktree list --porcelain 2>/dev/null | awk 'NR==1{print $2}')}
@@ -48,9 +48,8 @@ BOSS=${HC_TERMINAL_ID:-}
 SPACE=""
 [ -n "$BOSS" ] && SPACE=$(hc get "$BOSS" 2>/dev/null | jq -r '.labels["herdr.space"] // empty')
 
-# Python: on Windows "python3" is often a Microsoft Store stub that does not run
-if python3 -c '' >/dev/null 2>&1; then PY=python3; elif python -c 'import sys; sys.exit(sys.version_info[0] < 3)' >/dev/null 2>&1; then PY=python; else fb_die "python 3 not found"; fi
-export PYTHONUTF8=1 PYTHONIOENCODING=utf-8
+# Templates are UTF-8 whatever the locale (a Linux C locale would make Python read them as ASCII)
+export PYTHONIOENCODING=utf-8
 
 fb_live() { [ "$(hc get "$1" 2>/dev/null | jq -r .state)" = live ]; }
 fb_status() { hc get "$1" 2>/dev/null | jq -r '.status.state // "-"'; }
@@ -85,9 +84,9 @@ fb_copy() {
 }
 # Variable names from a .env file (KEY=… and export KEY=…)
 fb_env_keys() { sed -nE 's/^[[:space:]]*(export[[:space:]]+)?([A-Za-z_][A-Za-z0-9_]*)=.*/\2/p' "$1" 2>/dev/null | sort -u; }
-# Something listens on the port? (a connect attempt works on macOS, Linux and Windows alike)
+# Something listens on the port? (a connect attempt: no lsof needed, many Linux systems lack it)
 # (IPv4 and IPv6: Node dev servers often listen on ::1 only)
-fb_port_busy() { "$PY" -c '
+fb_port_busy() { python3 -c '
 import socket,sys
 def up(fam, host):
     try:
@@ -114,7 +113,7 @@ fb_same_commit() { [ "$(git -C "$REPO" rev-parse -q --verify "$1^{commit}" 2>/de
 # Role template: {{VAR}} -> environment variable value, {{NOTES}} -> project notes.
 # An unknown {{VAR}} is an error, so a typo in a template does not silently become an empty string.
 fb_render() {
-  NOTES=$( [ -f "$NOTES_FILE" ] && cat "$NOTES_FILE" ) "$PY" -c '
+  NOTES=$( [ -f "$NOTES_FILE" ] && cat "$NOTES_FILE" ) python3 -c '
 import os,re,sys
 t=open(sys.argv[1], encoding="utf-8").read()
 miss=sorted({m for m in re.findall(r"\{\{(\w+)\}\}", t) if m not in os.environ})

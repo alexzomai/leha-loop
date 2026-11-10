@@ -41,7 +41,7 @@ elif [ -n "$port" ]; then
 fi
 hc kill "$n" >/dev/null 2>&1 || true; hc rm "$n" >/dev/null 2>&1 || true
 rm -f "$STATE/sent-$n"
-"$PY" "$FB/scripts/layout.py" rm-folder "$wt" >/dev/null || true
+python3 "$FB/scripts/layout.py" rm-folder "$wt" >/dev/null || true
 if [ -d "$wt" ]; then git -C "$REPO" worktree remove --force "$wt"; fi
 git -C "$REPO" worktree prune
 # -D: "merged" was checked against BASE above; -d would check against whatever the main checkout has out
