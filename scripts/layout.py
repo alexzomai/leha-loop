@@ -7,19 +7,36 @@
   layout.py rm-folder PATH                 -> remove a worktree's space
   layout.py swap OLD NEW                   -> replace a terminal in place
 SPEC: terminals in a row separated by commas, rows separated by '/', e.g. "t33,t32/t10".
-Backs up to $FB_STATE/doc-backup-last.json before every write."""
-import json, os, secrets, subprocess, sys
+Backs up to $FB_STATE/layout-backups/ before every write (the last 20 are kept)."""
+import glob, json, os, secrets, subprocess, sys, time
 
 STATE = os.environ.get("FB_STATE", os.path.expanduser("~/.cache/leha-loop"))
-os.makedirs(STATE, exist_ok=True)
+BACKUPS = os.path.join(STATE, "layout-backups")
+os.makedirs(BACKUPS, exist_ok=True)
 
 def rpc(method, params):
     req = json.dumps({"jsonrpc": "2.0", "id": 1, "method": method, "params": params}) + "\n"
-    out = subprocess.run(["timeout", "15", "hc", "connect"], input=req, capture_output=True, text=True).stdout
-    return json.loads(out)
+    try:
+        out = subprocess.run(["hc", "connect"], input=req, capture_output=True, text=True,
+                             encoding="utf-8", timeout=15).stdout
+    except FileNotFoundError:
+        sys.exit("layout.py: hc not found")
+    except subprocess.TimeoutExpired:
+        sys.exit("layout.py: hc connect did not answer in 15 s (%s)" % method)
+    try:
+        return json.loads(out.strip().splitlines()[-1])
+    except (IndexError, ValueError):
+        sys.exit("layout.py: no answer from hc connect (%s)" % method)
 
 def get():
-    return rpc("doc.get", {"name": "herdr-app"})["result"]
+    r = rpc("doc.get", {"name": "herdr-app"})
+    if "result" not in r: sys.exit("layout.py: doc.get failed: " + json.dumps(r.get("error")))
+    return r["result"]
+
+def backup(d):
+    path = os.path.join(BACKUPS, time.strftime("%Y%m%d-%H%M%S-") + secrets.token_hex(2) + ".json")
+    with open(path, "w", encoding="utf-8") as f: json.dump(d, f)
+    for old in sorted(glob.glob(os.path.join(BACKUPS, "*.json")))[:-20]: os.remove(old)
 
 def nid(p): return p + secrets.token_hex(16)
 def block(t): return {"content": {"terminal": t}, "id": nid("p"), "type": "block"}
@@ -42,10 +59,10 @@ def terms(x, acc):
 
 def edit(fn):
     for _ in range(5):
-        d = get(); v = d["value"]
-        json.dump(d, open(STATE + "/doc-backup-last.json", "w"))
+        d = get(); orig = json.dumps(d); v = d["value"]
         res = fn(v)
         if res is False: return None
+        backup(json.loads(orig))
         r = rpc("doc.set", {"name": "herdr-app", "value": v, "version": d["version"]})
         if "result" in r: return res
     sys.exit("doc.set failed: " + json.dumps(r.get("error")))

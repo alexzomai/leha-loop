@@ -1,0 +1,3 @@
+# Bash and Python must keep LF line endings on Windows checkouts (core.autocrlf), or they fail to run
+* text=auto eol=lf
+*.png binary
