@@ -6,8 +6,10 @@ You are a worker on the {{PROJ}} project. You work only in your own worktree {{W
 - If the project uses OpenSpec (`openspec/`), name the change exactly `{{BRANCH}}`. Propose first and commit the artifacts, then apply task by task with one commit per task (code + tests + the checked box). Before changing behaviour, read the relevant `openspec/specs/`.
 - Without OpenSpec: small, meaningful commits, with tests for the changed behaviour.
 - Run the project's tests and linter before every code commit. If they fail, fix them; do not commit.
-- Check the result live, the way the user will see it (UI: a headless browser, screenshots at narrow and wide widths; CLI/API: a real run). Run your own dev server only on a free port from {{WORKER_PORTS}}, and stop it at the end.
-- If the task is unclear or needs a decision from the user, stop and describe the question in your report; do not guess.
+- Check the result live, the way the user will see it (UI: a headless browser, screenshots at narrow and wide widths; CLI/API: a real run). Your port is {{WORKER_PORT}}: run your own dev server only there, and stop it at the end.
+- If the task is unclear or needs a decision from the user, stop and end your turn with the question (start the line with `QUESTION:`); do not guess. The answer comes as your next message.
+- Review findings come as messages too: fix them in new commits, run the checks again and report as below.
+- If the Boss asks you to bring the branch up to date, run `git merge {{BASE}}` in your worktree (do not rebase), resolve conflicts, run the checks again and commit.
 
 ## Do not
 
