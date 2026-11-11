@@ -5,13 +5,25 @@
 A Claude Code skill that makes the agent a "feature boss" for any git project. It runs a team of agents in [Herdr](https://herdr.app) (`hc`, herdr-core):
 
 - Claude workers, each in its own git worktree and its own app space;
-- Codex reviewers working in parallel, one branch per reviewer;
-- a merger that merges approved work, and archives or pushes only on command;
+- a new Codex reviewer for every review, opened by the worker in a pane beside it, once the boss allows the review;
+- a merger in the main checkout, in its own tab, that merges approved work and archives or pushes only on command;
 - watching the agents, cleaning up worktrees, restarting the dev server.
 
-<p align="center"><img src="assets/loop.png" alt="The leha-loop cycle" width="560"></p>
+```mermaid
+flowchart TD
+  U([User]) -->|feature request| B[Boss]
+  B -->|task + worktree| W[Worker · Claude]
+  W -->|READY FOR REVIEW| B2{Boss allows review}
+  B2 -->|review-ok| R[New reviewer · Codex<br/>beside the worker]
+  B2 -.->|send back| W
+  R -->|CHANGES REQUESTED| W
+  R -->|APPROVED| M[Merger · own tab]
+  M -->|MERGED| C[Boss: restart dev, clean up]
+  C -->|to check list| U
+  U -.->|confirmed| A[Archive + push on command]
+```
 
-It fits projects that use [OpenSpec](https://github.com/Fission-AI/OpenSpec): branch = worktree = change id, workers propose and then apply the change, reviewers run `openspec validate --strict`. Merged but unarchived changes become the user's "to check" list, and a change is archived only after the user confirms it. Projects without OpenSpec work too, with plain branches.
+It fits projects that use [OpenSpec](https://github.com/Fission-AI/OpenSpec): branch = worktree = change id, the boss gives each worker its own change (a shared plan, if any, stays with the boss), workers apply it, reviewers run `openspec validate --strict`. Merged but unarchived changes become the user's "to check" list, and a change is archived only after the user confirms it. Projects without OpenSpec work too, with plain branches.
 
 ## Install
 
