@@ -55,17 +55,15 @@ Every handoff is checked by a script, not by trust: a review only runs for the e
 ## How it works
 
 ```mermaid
-flowchart TD
-  U([User]) -->|feature request| B[Boss]
-  B -->|task + worktree| W[Worker · Claude]
-  W -->|READY FOR REVIEW| B2{Boss allows review}
-  B2 -->|review-ok| R[New reviewer · Codex<br/>beside the worker]
-  B2 -.->|send back| W
-  R -->|CHANGES REQUESTED| W
-  R -->|APPROVED| M[Merger · own tab]
-  M -->|MERGED| C[Boss: restart dev, clean up]
-  C -->|to check list| U
-  U -.->|confirmed| A[Archive + push on command]
+flowchart LR
+  U([User]) -->|request| B[Boss]
+  B -->|task| W[Worker<br/>Claude]
+  W -->|ready| B
+  B -->|review-ok| R[Reviewer<br/>Codex]
+  R -->|changes| W
+  R -->|approved| M[Merger]
+  M -->|merged, to check| U
+  U -.->|confirm| A[Archive + push]
 ```
 
 | Role | Agent | Where it runs | Lifetime |
