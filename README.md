@@ -58,12 +58,10 @@ Every handoff is checked by a script, not by trust: a review only runs for the e
 flowchart LR
   U([User]) -->|request| B[Boss]
   B -->|task| W[Worker<br/>Claude]
-  W -->|ready| B
-  B -->|review-ok| R[Reviewer<br/>Codex]
-  R -->|changes| W
+  W -->|review-ok| R[Reviewer<br/>Codex]
+  R -.->|changes| W
   R -->|approved| M[Merger]
-  M -->|merged, to check| U
-  U -.->|confirm| A[Archive + push]
+  M -.->|to check| U
 ```
 
 | Role | Agent | Where it runs | Lifetime |
