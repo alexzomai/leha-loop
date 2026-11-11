@@ -21,21 +21,20 @@ PREFIX=${PREFIX-$PROJ-}
 WT_ROOT=${WT_ROOT:-$HOME/.herdr/worktrees/$PROJ}
 STATE=$HOME/.cache/leha-loop/$PROJ
 REVIEWS=${REVIEWS:-$STATE/reviews}
-REVIEWERS=${REVIEWERS:-2}
-case $REVIEWERS in ''|*[!0-9]*|0) fb_die "REVIEWERS must be a number from 1 up, got '$REVIEWERS'";; esac
 MAX_REVIEW_ROUNDS=${MAX_REVIEW_ROUNDS:-3}
-TEAM_TAB=${TEAM_TAB:-review & merge}
+MERGE_TAB=${MERGE_TAB:-merge}
 DEV_TAB=${DEV_TAB:-dev}
 DEV_NAME=${DEV_NAME:-${PREFIX}dev}
 DEV_PORT=${DEV_PORT:-}
 WORKER_PORTS=${WORKER_PORTS:-3100-3199}
 [ ${#WORKER_CMD[@]} -gt 0 ] || WORKER_CMD=(claude --model claude-opus-5-5 --effort medium --permission-mode auto)
 [ ${#MERGER_CMD[@]} -gt 0 ] || MERGER_CMD=("${WORKER_CMD[@]}")
-[ ${#REVIEWER_CMD[@]} -gt 0 ] || REVIEWER_CMD=(codex --no-daemon -m gpt-6.1-sol -s workspace-write -a never)
+# Reviewer: a new Codex for every review; the model is added by review.sh (REVIEWER_MODEL)
+[ ${#REVIEWER_CMD[@]} -gt 0 ] || REVIEWER_CMD=(codex --no-daemon -s workspace-write -a never)
+REVIEWER_MODEL=${REVIEWER_MODEL:-latest-sol}
 [ ${#COPY[@]} -gt 0 ] || COPY=(node_modules .env .env.local)
 WT_SETUP=${WT_SETUP:-}
-# Slash command that gives an agent a fresh context before each review/merge (empty: keep the context)
-REVIEWER_RESET=${REVIEWER_RESET-/new}
+# Slash command that gives the merger a fresh context before each merge (empty: keep the context)
 MERGER_RESET=${MERGER_RESET-/clear}
 mkdir -p "$STATE" "$REVIEWS"
 STATE_FILE=$STATE/state.json
@@ -50,6 +49,36 @@ SPACE=""
 
 # Templates are UTF-8 whatever the locale (a Linux C locale would make Python read them as ASCII)
 export PYTHONIOENCODING=utf-8
+
+# Codex model for reviewers: REVIEWER_MODEL, where "latest-sol" means the newest gpt-<version>-sol
+# in Codex's model cache (falls back to gpt-6.1-sol if the cache has none)
+fb_reviewer_model() {
+  [ "$REVIEWER_MODEL" = latest-sol ] || { echo "$REVIEWER_MODEL"; return; }
+  local m
+  m=$(jq -r '.models[]? | .slug // .id // empty' "$HOME/.codex/models_cache.json" 2>/dev/null \
+      | grep -E '^gpt-[0-9]+(\.[0-9]+)*-sol$' | sed -E 's/^gpt-([0-9.]+)-sol$/\1 &/' | sort -t. -k1,1n -k2,2n -k3,3n | tail -1 | cut -d' ' -f2)
+  echo "${m:-gpt-6.1-sol}"
+}
+# The branch of the worktree we are in (a worker runs scripts from its own worktree)
+fb_cwd_branch() { case $PWD/ in "$WT_ROOT"/*) git rev-parse --abbrev-ref HEAD 2>/dev/null;; esac; }
+
+# A new worktree is a new folder for the agent, and both Claude Code and Codex first ask whether to trust it.
+# It is a worktree we just created, so accept: Claude "Yes, I trust this folder" (the cursor starts on
+# "No, exit", so move to it first), Codex "Trust and continue". Gives up after ~40 s or once the agent works.
+fb_accept_trust() {
+  local t=$1 scr i
+  for i in $(seq 1 20); do
+    sleep 2
+    [ "$(fb_status "$t")" = working ] && return 0
+    scr=$(hc read "$t" --lines 30 2>/dev/null)
+    if grep -q 'Yes, I trust this folder' <<<"$scr"; then
+      if grep -q '❯ *Yes, I trust this folder' <<<"$scr"; then hc keys "$t" enter >/dev/null 2>&1; return 0; fi
+      hc keys "$t" down >/dev/null 2>&1
+    elif grep -q 'Trust this folder' <<<"$scr"; then
+      hc keys "$t" enter >/dev/null 2>&1; return 0
+    fi
+  done
+}
 
 fb_live() { [ "$(hc get "$1" 2>/dev/null | jq -r .state)" = live ]; }
 fb_status() { hc get "$1" 2>/dev/null | jq -r '.status.state // "-"'; }

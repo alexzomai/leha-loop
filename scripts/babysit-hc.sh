@@ -38,6 +38,16 @@ while true; do
     blocked) out 2 "BLOCKED — waiting for a decision on screen" ;;
   esac
   last=$(hc read "$t" --lines 0 2>/dev/null | grep -v '^\s*$' | tail -4)
+  # A Claude agent that ended its turn while its own background task runs (e.g. a worker waiting
+  # for its reviewer) is not finished: wait for the turn that task's notification starts.
+  if grep -q -E '[0-9]+ shells? still running|· [0-9]+ shells? ·' <<<"$last"; then
+    # (A dev server left running would also show here: after 2 hours report anyway.)
+    tn=$(fb_turn "$t"); w=0
+    while [ "$(fb_turn "$t")" = "$tn" ] && [ "$(fb_status "$t")" != working ]; do
+      fb_live "$t" || out 1 "not live"; w=$((w+1)); [ $w -gt 720 ] && out 0 "done, background shells still running after 2 h"; sleep 10
+    done
+    continue
+  fi
   if grep -q "Usage limit" <<<"$last"; then
     limits=$((limits+1)); [ $limits -gt 24 ] && out 1 "usage limit for 2 hours, giving up"
     sleep 300

@@ -1,9 +1,0 @@
-flowchart TD
-  U([User]) -->|feature request| B[Boss]
-  B -->|task + worktree| W[Worker · Claude]
-  W -->|propose → apply, live check| R{Reviewer · Codex}
-  R -->|CHANGES REQUESTED| W
-  R -->|APPROVED| M[Merger]
-  M -->|MERGED| C[Boss: restart dev, clean up]
-  C -->|to check list| U
-  U -.->|confirmed| A[Archive + push on command]

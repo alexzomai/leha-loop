@@ -1,6 +1,6 @@
 #!/bin/bash
 # usage: cleanup-worker.sh [--abandon] <branch> <terminal-name>
-# Cleans up a worker: its dev server, terminal, app space, worktree, branch.
+# Cleans up a worker: its dev server, terminal, its reviewer, app space, worktree, branch.
 # Every check runs before anything is deleted. Without --abandon the branch must be merged into
 # BASE and the worktree clean. --abandon (only after the user agreed to throw the work away)
 # deletes an unmerged branch and uncommitted changes too.
@@ -39,8 +39,8 @@ elif [ -n "$port" ]; then
     case $cwd in "$wt"|"$wt"/*) kill "$pid" 2>/dev/null && echo "stopped pid $pid on port $port";; esac
   done
 fi
-hc kill "$n" >/dev/null 2>&1 || true; hc rm "$n" >/dev/null 2>&1 || true
-rm -f "$STATE/sent-$n"
+rv=$(fb_state_get "$b" reviewer)
+for x in "$n" $rv; do hc kill "$x" >/dev/null 2>&1 || true; hc rm "$x" >/dev/null 2>&1 || true; rm -f "$STATE/sent-$x"; done
 python3 "$FB/scripts/layout.py" rm-folder "$wt" >/dev/null || true
 if [ -d "$wt" ]; then git -C "$REPO" worktree remove --force "$wt"; fi
 git -C "$REPO" worktree prune

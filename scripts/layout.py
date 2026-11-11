@@ -6,6 +6,7 @@
   layout.py add-space FOLDER TAB SPEC      -> "space_id tab_id"
   layout.py rm-folder PATH                 -> remove a worktree's space
   layout.py swap OLD NEW                   -> replace a terminal in place
+  layout.py add-right OLD NEW              -> put terminal NEW in a pane right of OLD
 SPEC: terminals in a row separated by commas, rows separated by '/', e.g. "t33,t32/t10".
 Backs up to $FB_STATE/layout-backups/ before every write (the last 20 are kept)."""
 import glob, json, os, secrets, subprocess, sys, time
@@ -110,6 +111,23 @@ elif cmd == "swap":
             elif isinstance(x, list):
                 for y in x: w(y)
         w(v); return "ok" if hit else False
+    print(edit(f) or "terminal " + a[0] + " not found in the layout")
+elif cmd == "add-right":
+    def f(v):
+        new = block(a[1])
+        def w(x):
+            if isinstance(x, dict):
+                kids = x.get("children")
+                if isinstance(kids, list):
+                    for i, c in enumerate(kids):
+                        if isinstance(c, dict) and (c.get("content") or {}).get("terminal") == a[0]:
+                            if x.get("type") == "row": kids.insert(i + 1, new)
+                            else: kids[i] = {"children": [c, new], "id": nid("s"), "type": "row"}
+                            return True
+                return any(w(y) for y in x.values())
+            if isinstance(x, list): return any(w(y) for y in x)
+            return False
+        return "ok" if w(v) else False
     print(edit(f) or "terminal " + a[0] + " not found in the layout")
 else:
     sys.exit(__doc__)

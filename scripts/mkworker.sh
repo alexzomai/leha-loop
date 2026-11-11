@@ -51,6 +51,7 @@ echo 0 > "$STATE/sent-$n"   # babysit-hc.sh waits for the first real turn
 t=$(hc run --bg --no-parent --outlive-parent --keep --name "$n" --cwd "$wt" "${WORKER_CMD[@]}" "$prompt" | jq -r '.address // empty')
 [ -n "$t" ] || { rm -f "$STATE/sent-$n"; fb_die "hc run did not start the worker"; }
 started=1
+fb_accept_trust "$t"   # Claude Code asks to trust the new worktree folder
 fb_state_set "$b" worker "$n" term "$t" wt "$wt" port "$port" phase working rounds 0 task "$task"
 if [ -n "$SPACE" ]; then
   read sid tid < <(python3 "$FB/scripts/layout.py" add-space "$wt" worker "$t") || true
