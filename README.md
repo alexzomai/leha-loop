@@ -54,15 +54,10 @@ Every handoff is checked by a script, not by trust: a review only runs for the e
 
 ## How it works
 
-```mermaid
-flowchart LR
-  U([User]) -->|request| B[Boss]
-  B -->|task| W[Worker<br/>Claude]
-  W -->|review-ok| R[Reviewer<br/>Codex]
-  R -.->|changes| W
-  R -->|approved| M[Merger]
-  M -.->|to check| U
-```
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="assets/loop-dark.svg">
+  <img alt="User → Boss → Worker → Reviewer → Merger loop" src="assets/loop-light.svg" width="100%">
+</picture>
 
 | Role | Agent | Where it runs | Lifetime |
 | --- | --- | --- | --- |
