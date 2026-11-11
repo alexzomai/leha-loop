@@ -55,4 +55,4 @@ sp=$(jq -r '.["herdr.space"] // empty' <<<"$lbl"); tb=$(jq -r '.["herdr.tab"] //
 # Codex asks to trust the new worktree (and remembers the answer in ~/.codex/config.toml)
 fb_accept_trust "$t"
 echo "$b@$head -> $name ($t, $model, round $rounds), report $report"
-echo "next: babysit-hc.sh $name in the background, then verdict.sh $b"
+echo "next: wait-review.sh in the background (not babysit: Codex may stay \"working\" after its report), then read the report"
