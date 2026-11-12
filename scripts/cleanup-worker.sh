@@ -7,6 +7,8 @@
 . "$(dirname "$0")/common.sh"; set -e
 abandon=""; [ "$1" = --abandon ] && { abandon=1; shift; }
 b=$1; n=$2; [ -n "$b" ] && [ -n "$n" ] || fb_die "usage: cleanup-worker.sh [--abandon] <branch> <name>"
+recorded=$(fb_state_get "$b" worker)
+[ -z "$recorded" ] || [ "$n" = "$recorded" ] || fb_die "recorded worker is $recorded, not $n; refusing to kill the wrong terminal"
 wt=$(fb_state_get "$b" wt); wt=${wt:-$WT_ROOT/$b}
 
 if [ -z "$abandon" ]; then
@@ -28,6 +30,8 @@ if [ -d "$wt" ]; then
     else fb_die "the worker's $f has variables missing from the main one: ${new}- move them over (without printing values) and run again"; fi
   ;; esac; done
 fi
+
+[ -n "$abandon" ] || fb_task _require-accepted "$b"
 
 # Everything below deletes. The worker's own servers first: listeners on its port whose cwd is inside the worktree.
 port=$(fb_state_get "$b" port)

@@ -38,8 +38,17 @@ WT_SETUP=${WT_SETUP:-}
 MERGER_RESET=${MERGER_RESET-/clear}
 mkdir -p "$STATE" "$REVIEWS"
 STATE_FILE=$STATE/state.json
-[ -s "$STATE_FILE" ] || echo '{}' > "$STATE_FILE"
-export FB FB_STATE=$STATE PROJ REPO BASE REVIEWS DEV_PORT WORKER_PORTS PREFIX
+python3 "$FB/scripts/state.py" "$STATE_FILE" init || fb_die "cannot initialize runtime state safely"
+FB_TASK_HOME=${FB_TASK_HOME:-$HOME/.local/share/leha-loop/$PROJ}
+MAX_PARALLEL_WORKERS=${MAX_PARALLEL_WORKERS:-3}
+export FB FB_STATE=$STATE STATE_FILE PROJ REPO BASE REVIEWS DEV_PORT WORKER_PORTS PREFIX WT_ROOT FB_TASK_HOME MAX_PARALLEL_WORKERS
+fb_task() { python3 "$FB/scripts/task.py" "$@"; }
+# Serialize port/worktree allocation, including direct legacy launcher invocations.
+fb_launch_locked() {
+  [ "${LEHA_LAUNCH_LOCKED:-}" = "$(cd "$REPO" && pwd -P)" ] || exec python3 "$FB/scripts/task.py" _locked-launch "$@"
+}
+fb_task_reserve() { fb_task _reserve "$@"; }
+fb_task_phase() { fb_task _phase "$@"; }
 
 # The Boss's space in Herdr app (from its own terminal's labels). Without HC_TERMINAL_ID
 # we do not guess: another terminal's space would get our tabs.
@@ -87,13 +96,8 @@ fb_label() { hc label "$1" herdr.space="$2" herdr.tab="$3" "where=$4" >/dev/null
 
 # Branch state: state.json = {"<branch>": {worker, term, wt, port, phase, reviewer, review_sha, rounds, ...}}
 fb_state_get() { jq -r --arg b "$1" --arg k "$2" '.[$b][$k] // empty' "$STATE_FILE"; }
-fb_state_set() { # branch key value [key value ...]
-  local b=$1 tmp; shift; tmp=$(mktemp "$STATE/.state.XXXXXX")
-  local args=(--arg b "$b" --arg now "$(date '+%Y-%m-%d %H:%M')") f='.[$b] = ((.[$b] // {}) + {updated: $now}' i=0
-  while [ $# -gt 1 ]; do args+=(--arg "k$i" "$1" --arg "v$i" "$2"); f="$f + {(\$k$i): \$v$i}"; i=$((i+1)); shift 2; done
-  jq "${args[@]}" "$f)" "$STATE_FILE" > "$tmp" && mv "$tmp" "$STATE_FILE"
-}
-fb_state_del() { local tmp; tmp=$(mktemp "$STATE/.state.XXXXXX"); jq --arg b "$1" 'del(.[$b])' "$STATE_FILE" > "$tmp" && mv "$tmp" "$STATE_FILE"; }
+fb_state_set() { python3 "$FB/scripts/state.py" "$STATE_FILE" set "$@"; }
+fb_state_del() { python3 "$FB/scripts/state.py" "$STATE_FILE" del "$1"; }
 
 # Remember an agent's turn before we send it something: babysit-hc.sh then waits for a newer turn
 # instead of reporting the previous one.

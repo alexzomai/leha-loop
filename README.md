@@ -42,6 +42,8 @@ Every handoff is checked by a script, not by trust: a review only runs for the e
 
 ## Features
 
+- **Durable task registry and queue.** Stable IDs, copied briefs, explicit file ownership, dependencies and a parallel limit. Dependencies release only after reviewed work is actually merged and accepted by the Boss. One worker report command saves evidence and notifies the recorded owner; recovery is inspection-first and never duplicates live workers. See [TASKS.md](TASKS.md) for the CLI and migration contract.
+
 - **Parallel workers.** `mkworker.sh` creates a worktree, copies gitignored files (`node_modules`, `.env.local`), runs setup, assigns a free port and opens the worker in its own Herdr space.
 - **Cross-model review.** Each review gets a new Codex reviewer in a pane beside the worker. The worker reads the verdict and fixes findings itself.
 - **Commit-pinned verdicts.** `verdict.sh` returns `APPROVED`, `STALE` (the base changed the same files) or `NONE`, and `merge.sh` refuses anything but `APPROVED` for the current HEAD.
@@ -112,6 +114,8 @@ Each project has one config at `~/.config/leha-loop/<repo-folder>.env`. It is ba
 | `MERGER_CMD` | same shape | how the merger starts |
 | `REVIEWER_CMD` / `REVIEWER_MODEL` | `(codex …)` / `latest-sol` | how reviewers start |
 | `MAX_REVIEW_ROUNDS` | `3` | rounds before the boss asks you |
+| `MAX_PARALLEL_WORKERS` | `3` | unfinished task slots; ownership conflicts also serialize |
+| `FB_TASK_HOME` | `~/.local/share/leha-loop/<project>` | durable registry, copied briefs, reports and delivery receipts |
 | `DEV_CMD` / `DEV_PORT` / `DEV_URL` | `(npm run dev -- -p 3000)` | main dev server |
 | `WORKER_PORTS` | `3100-3199` | port range for workers |
 | `COPY` / `WT_SETUP` | `(node_modules .env.local)` | how a new worktree is prepared |
@@ -128,7 +132,11 @@ All scripts live in `scripts/` and find the project from the current git folder.
 | --- | --- | --- |
 | `status.sh` | boss | config, terminals, branches in work, worktrees, unmerged branches, OpenSpec changes |
 | `team-up.sh` | boss | starts the merger and dev server; safe to rerun |
-| `mkworker.sh <branch> <name> <task>` | boss | worktree + port + worker in its own space |
+| `task.sh add/start/list/show/schedule` | boss | durable task planning, ownership, dependencies and dispatch |
+| `task.sh report <ID> --state <state> --file <report>` | worker | persist evidence and notify the actual coordinator, idempotently |
+| `task.sh accept <ID>` | boss | verify reviewed SHA is merged, accept and release queued dependencies |
+| `task.sh recover [--apply]` / `resume <ID>` | boss | inspect/reconcile metadata; explicitly resume only a lost worker in its existing checkout |
+| `mkworker.sh <branch> <name> <task>` | boss | legacy direct launch, now registered with conservative whole-repo ownership |
 | `babysit-hc.sh <name>` | boss | waits for an agent's turn, recovers from drops, detects blocks |
 | `send.sh <name> <text>` | boss | messages an agent so babysit waits for the reply |
 | `review-ok.sh <branch>` | boss | allows a review of exactly the current HEAD |

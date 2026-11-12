@@ -7,6 +7,7 @@ m=${PREFIX}merger
 v=$("$FB/scripts/verdict.sh" "$b") || fb_die "not merging $b: $v"
 fb_live "$m" || fb_die "$m is not live (team-up.sh starts it)"
 [ "$(fb_status "$m")" = working ] && fb_die "$m is busy"
+fb_task_phase "$b" merging
 rules=$(fb_render "$FB/roles/merger.md")
 fb_reset "$m" "$MERGER_RESET"
 fb_send "$m" "$rules

@@ -16,7 +16,7 @@ start() { # name cmd... (for agents the last argument is the first message)
 }
 rules=$(fb_render "$FB/roles/merger.md")
 fresh=""; fb_live "${PREFIX}merger" || fresh=1
-merger=$(start "${PREFIX}merger" "${MERGER_CMD[@]}" "$rules")
+merger=$(start "${PREFIX}merger" env "FB_PROJ=$PROJ" "FB_REPO=$REPO" "FB_TASK_HOME=$FB_TASK_HOME" "${MERGER_CMD[@]}" "$rules")
 [ -n "$fresh" ] && fb_accept_trust "$merger"   # Claude Code may ask to trust the main checkout folder
 dev=""; [ ${#DEV_CMD[@]} -gt 0 ] && dev=$(start "$DEV_NAME" "${DEV_CMD[@]}")
 if [ -n "$SPACE" ]; then

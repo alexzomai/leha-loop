@@ -17,6 +17,15 @@ dirty=$(git -C "$wt" status --porcelain | head -5)
 [ -z "$dirty" ] || fb_die "uncommitted changes in $wt; commit them, report to the Boss and wait for a new allowance:
 $dirty"
 
+# Resolve the worker before touching the old reviewer or its report. Never guess from UI focus.
+w=$(fb_state_get "$b" term)
+[ -n "$w" ] || fb_die "no worker terminal recorded for $b; cannot attach a native reviewer"
+worker_info=$(hc get "$w") || fb_die "cannot resolve worker terminal $w"
+[ "$(jq -r .state <<<"$worker_info")" = live ] || fb_die "worker terminal $w is not live"
+w=$(jq -r '.address // empty' <<<"$worker_info")
+[ -n "$w" ] || fb_die "hc did not return the worker address"
+
+fb_task_phase "$b" reviewing
 rounds=$(fb_state_get "$b" rounds); rounds=$(( ${rounds:-0} + 1 ))
 name=${PREFIX}review-$b
 old=$(fb_state_get "$b" reviewer_term)
@@ -36,15 +45,14 @@ rules=$(REVIEWER=$name fb_render "$FB/roles/reviewer.md")
 task=$(BRANCH=$b WT=$wt HEAD_SHA=$head REPORT=$report fb_render "$FB/roles/review-task.md")
 echo 0 > "$STATE/sent-$name"
 # --add-dir: the report folder is outside the worktree, the sandbox must let Codex write there
-t=$(hc run --bg --no-parent --outlive-parent --keep --name "$name" --cwd "$wt" \
-     "${REVIEWER_CMD[@]}" -m "$model" --add-dir "$REVIEWS" "$rules
+t=$(hc run --bg --parent "$w" --outlive-parent --keep --label "leha.role=reviewer" --label "leha.branch=$b" --name "$name" --cwd "$wt" \
+     env "FB_PROJ=$PROJ" "FB_REPO=$REPO" "FB_TASK_HOME=${FB_TASK_HOME:-}" "${REVIEWER_CMD[@]}" -m "$model" --add-dir "$REVIEWS" "$rules
 
 $task" | jq -r '.address // empty')
 [ -n "$t" ] || { rm -f "$STATE/sent-$name"; fb_die "hc run did not start the reviewer"; }
 fb_state_set "$b" phase review reviewer "$name" reviewer_term "$t" review_sha "$head" rounds "$rounds" review_ok_sha ""
 
 # Pane: the old reviewer's place, else right of the worker; labels: the worker's space and tab
-w=$(fb_state_get "$b" term); w=${w:-$BOSS}
 placed=""
 [ -n "$old" ] && [ "$(python3 "$FB/scripts/layout.py" swap "$old" "$t")" = ok ] && placed=1
 [ -z "$placed" ] && [ -n "$w" ] && python3 "$FB/scripts/layout.py" add-right "$w" "$t" >/dev/null || true

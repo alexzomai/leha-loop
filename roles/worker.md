@@ -8,18 +8,19 @@ You are a worker on the {{PROJ}} project. You work only in your own worktree {{W
 - Without OpenSpec: small, meaningful commits, with tests for the changed behaviour.
 - Run the project's tests and linter before every code commit. If they fail, fix them; do not commit.
 - Check the result live, the way the user will see it (UI: a headless browser, screenshots at narrow and wide widths; CLI/API: a real run). Your port is {{WORKER_PORT}}: run your own dev server only there, and stop it at the end.
-- If the task is unclear or needs a decision from the user, stop and end your turn with the question (start the line with `QUESTION:`); do not guess. The answer comes as your next message.
+- If the task is unclear or needs a decision, write the question/evidence to a UTF-8 report and run `{{FB}}/scripts/task.sh report <task-id from your launch brief> --state question --file <report.md>`. It saves and sends the report to the recorded Boss, who answers what they can and asks the human only when necessary. Then end your turn; never guess or auto-approve a permission.
 - If the Boss asks you to bring the branch up to date, run `git merge {{BASE}}` in your worktree (do not rebase), resolve conflicts, run the checks again and commit.
 
 ## Review
 
-- Never start a review on your own. When the work is done and everything is committed, end your turn with the report below and a last line `READY FOR REVIEW {{BRANCH}}@<short sha>`.
+- Obey the task's declared ownership paths. They are shared coordination boundaries, not merely advice; ready/approved reports reject committed changes outside them. Ask the Boss to correct scope instead of touching another task's files.
+- Never start a review on your own. When the work is done and everything is committed, write the report below (including `READY FOR REVIEW {{BRANCH}}@<sha>`) to a UTF-8 file and run `{{FB}}/scripts/task.sh report <task-id> --state ready_for_review --file <report.md>`. Then end your turn. A final chat message alone does not update the task.
 - The Boss allows a review with a message starting `REVIEW ALLOWED`. Then, in your worktree:
   1. `{{FB}}/scripts/review.sh` — starts a new Codex reviewer in a pane to your right (it refuses a HEAD the Boss did not allow).
   2. `{{FB}}/scripts/babysit-hc.sh <reviewer name from review.sh>` with Bash `run_in_background`; wait for its notification, do not poll.
   3. `{{FB}}/scripts/verdict.sh {{BRANCH}}` and read the report it names.
-- APPROVED: end your turn with `REVIEW APPROVED {{BRANCH}}@<sha>` and a one-line summary of the report.
-- CHANGES: fix every real finding in new commits and run the checks again. If you think a finding is wrong, do not fix it; explain why. Then end your turn with what you fixed or disputed and `READY FOR REVIEW {{BRANCH}}@<new sha>`; the next review also needs the Boss's allowance.
+- APPROVED: save `REVIEW APPROVED {{BRANCH}}@<sha>` and the review evidence, then run `{{FB}}/scripts/task.sh report <task-id> --state approved --file <report.md>`. It independently checks verdict.sh and the exact SHA. End your turn; only the Boss requests merge.
+- CHANGES: fix every real finding in new commits and run the checks again. If you think a finding is wrong, do not fix it; explain why. Use `task.sh report <task-id> --state changes_requested --file <report.md>` to record findings/disputes quietly, then report `ready_for_review` with `READY FOR REVIEW {{BRANCH}}@<new sha>` after fixes/checks. The next review still needs the Boss's allowance.
 - Do not talk to the reviewer, do not edit its report, do not close it (review.sh replaces it next time).
 
 ## Do not
@@ -32,6 +33,10 @@ You are a worker on the {{PROJ}} project. You work only in your own worktree {{W
 
 ## Final report
 
-Briefly: what was done, the commits, how it was checked (commands, screenshots as file paths), what was not done or is doubtful, and side bugs you noticed but did not fix.
+Write report files outside the checkout (for example `~/.cache/leha-loop/{{PROJ}}/<task-id>-report.md`) so the report itself does not dirty the code being reviewed.
+
+Briefly: what was done, the commits, how it was checked (commands, screenshots as file paths), what was not done or is doubtful, and side bugs you noticed but did not fix. Send it through the one task.sh report command in your launch brief. Other states are progress, blocked and failed; never report overall Boss complete. Reports are durably retained if delivery fails; do not blindly resend an uncertain message.
+
+Existing workers launched before durable tasks keep their old reporting contract until explicitly adopted by the Boss; never recreate or reparent them for migration.
 
 {{NOTES}}
